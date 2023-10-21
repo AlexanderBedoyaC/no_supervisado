@@ -1,11 +1,12 @@
+import numpy as np
+import pandas as pd
+import scipy.stats as stats
+import plotly.express as px
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
+    
 #Función para gráfico de caja, histograma y curva normal
 def graficar_distribucion(data, cols):
-    
-    import numpy as np
-    import scipy.stats as stats
-    import plotly.express as px
-    from plotly.subplots import make_subplots
-    import plotly.graph_objects as go
 
     df = data[cols]
     specs = [[{"type": "box"}, {"type": "histogram"},{"type": "scatter"}]  for i in range(5)]
@@ -36,3 +37,48 @@ def graficar_distribucion(data, cols):
         
     fig.update_layout(height=1200, showlegend=False)
     fig.show()
+    
+#Genera tabla de frecuencias para una variable
+def tabla_frecuencias(df, col):
+    
+    n = df.shape[0]
+    tabla = df.groupby([col])[[col]].count().rename(columns={col:'Frecuencia Absoluta'}).reset_index()
+    tabla['Frecuencia Relativa'] = tabla['Frecuencia Absoluta'].apply(lambda x: str(round(100*x/n, 3))+' %')
+    
+    return tabla.sort_values(by='Frecuencia Absoluta', ascending=False)
+
+#Genera tabla de frecuencias y gráfico de barras para una variable
+def univariado_barras(df, col, orientation='v'):
+    
+    if orientation=='v':
+        x = col
+        y = ['Frecuencia Absoluta']
+    else:
+        x = ['Frecuencia Absoluta']
+        y = col
+    
+    tabla = tabla_frecuencias(df, col)
+    
+    fig = px.bar(tabla,
+             x = x,
+             y = y,
+             text_auto = True,
+             title = col.capitalize().replace('_', ' '),
+             height = 400,
+             labels = {'value': 'Total', col:col},
+             text = 'Frecuencia Relativa', orientation=orientation)
+    fig.layout.update(showlegend=False)
+    fig.show()
+    
+    return tabla
+
+#Obtener tablas de contingencia y graficarlas
+def Analisisbivariado(df,variables,orient,mode,color=px.colors.qualitative.Plotly):
+    contingency_table=pd.crosstab(df[variables[0]],df[variables[1]])
+    contingency_table = contingency_table.div(contingency_table.sum(axis=1), axis=0)
+    fig=px.bar(contingency_table,orientation=orient,barmode=mode,color_discrete_sequence=color)
+    fig.update_layout(title=dict(x=0.5))
+    fig.update_traces(texttemplate='%{value:.2%}', textposition='outside')
+    fig.show()
+    print("Tabla de contingencia:")
+    return contingency_table
