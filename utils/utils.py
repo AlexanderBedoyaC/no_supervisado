@@ -9,9 +9,9 @@ import plotly.graph_objects as go
 def graficar_distribucion(data, cols):
 
     df = data[cols]
-    specs = [[{"type": "box"}, {"type": "histogram"},{"type": "scatter"}]  for i in range(5)]
+    specs = [[{"type": "box"}, {"type": "histogram"},{"type": "scatter"}]  for i in range(len(cols))]
     fig = make_subplots(
-        rows = 5, cols = 3,
+        rows = len(cols), cols = 3,
         specs = specs,
         subplot_titles = [c for c in cols for i in range(3)]
     )
@@ -21,11 +21,11 @@ def graficar_distribucion(data, cols):
         'rgb(129, 196, 116)',  # Verde suave
         'rgb(235, 107, 86)',  # Rojo suave
         'rgb(190, 117, 202)'  # Morado suave
-    ]
-    for i in range(5):
+    ]*3
+    for i in range(len(cols)):
         fig.add_trace(go.Box(y = df.iloc[:,i], marker_color=colors[i], name=""),
                 row = i+1, col = 1)
-    for i in range(5):
+    for i in range(len(cols)):
         x = np.sort(df.iloc[:,i])
         media = np.mean(x)
         sd = np.std(x)
@@ -45,10 +45,10 @@ def tabla_frecuencias(df, col):
     tabla = df.groupby([col])[[col]].count().rename(columns={col:'Frecuencia Absoluta'}).reset_index()
     tabla['Frecuencia Relativa'] = tabla['Frecuencia Absoluta'].apply(lambda x: str(round(100*x/n, 3))+' %')
     
-    return tabla.sort_values(by='Frecuencia Absoluta', ascending=False)
+    return tabla.sort_values(by='Frecuencia Absoluta', ascending=True)
 
 #Genera tabla de frecuencias y gráfico de barras para una variable
-def univariado_barras(df, col, orientation='v'):
+def univariado_barras(df, col, orientation='v', h=400,n=10):
     
     if orientation=='v':
         x = col
@@ -59,18 +59,18 @@ def univariado_barras(df, col, orientation='v'):
     
     tabla = tabla_frecuencias(df, col)
     
-    fig = px.bar(tabla,
+    fig = px.bar(tabla.iloc[-n:,:],
              x = x,
              y = y,
              text_auto = True,
              title = col.capitalize().replace('_', ' '),
-             height = 400,
+             height = h,
              labels = {'value': 'Total', col:col},
              text = 'Frecuencia Relativa', orientation=orientation)
     fig.layout.update(showlegend=False)
     fig.show()
     
-    return tabla
+    return tabla.iloc[-n:,:].sort_values(by='Frecuencia Absoluta', ascending=False)
 
 #Obtener tablas de contingencia y graficarlas
 def Analisisbivariado(df,variables,orient,mode,color=px.colors.qualitative.Plotly):
@@ -82,3 +82,20 @@ def Analisisbivariado(df,variables,orient,mode,color=px.colors.qualitative.Plotl
     fig.show()
     print("Tabla de contingencia:")
     return contingency_table
+
+#Obtener correlaciones de variables categóricas
+def corr_cat(df):
+    from scipy.stats import chi2_contingency
+    
+    cols = df.columns
+    df_corr_cat = pd.DataFrame()
+
+    corrs = []
+    for col in cols:
+        tabla_contingencia = pd.crosstab(df['attrition'], df[col])
+        chi2, p, _, _ = chi2_contingency(tabla_contingencia)
+        corrs.append(p)
+    df_corr_cat['attrition'] = corrs
+    df_corr_cat.index = cols
+    
+    return df_corr_cat
