@@ -99,3 +99,16 @@ def corr_cat(df):
     df_corr_cat.index = cols
     
     return df_corr_cat
+
+#Eliminar valores atípicos
+def eliminar_atipicos(df, cols, umbral):
+    
+    for col in cols:
+        q1 = df[col].quantile(0.25)
+        q3 = df[col].quantile(0.75)
+        iqr = q3 - q1
+        lim_inf = q1 - umbral * iqr
+        lim_sup = q3 + umbral * iqr
+        df = df[(df[col] > lim_inf) & (df[col] < lim_sup)]
+        
+    return df
